@@ -19,13 +19,13 @@ contract DeployScript is Script {
 
         // Deploy vault with reward token as both deposit and reward
         TokenVault vault = new TokenVault(
-            address(rewardToken),  // deposit token
-            address(rewardToken),  // reward token  
+            address(rewardToken), // deposit token
+            address(rewardToken), // reward token
             "Gas-optimized yield vault on Monad"
         );
-        
+
         console.log("TokenVault:", address(vault));
-        
+
         // Mint tokens to vault for rewards
         rewardToken.mint(address(vault), 1000000e18);
         console.log("Minted 1M tokens to vault for rewards");

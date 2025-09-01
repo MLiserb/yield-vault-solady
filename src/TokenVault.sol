@@ -25,7 +25,7 @@ contract TokenVault is Ownable, ReentrancyGuard {
 
     IERC20 public immutable depositToken;
     IERC20 public immutable rewardToken;
-    
+
     uint256 public yieldRate = 1000; // 10% per year (basis points)
     uint256 public totalDeposits;
     address public metadataPointer;
@@ -49,41 +49,37 @@ contract TokenVault is Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(
-        address _depositToken,
-        address _rewardToken,
-        string memory _metadata
-    ) {
+    constructor(address _depositToken, address _rewardToken, string memory _metadata) {
         _initializeOwner(msg.sender);
         depositToken = IERC20(_depositToken);
         rewardToken = IERC20(_rewardToken);
-        
+
         // Store metadata using SSTORE2
         metadataPointer = SSTORE2.write(bytes(_metadata));
     }
 
     function deposit(uint256 amount) external nonReentrant updateRewards(msg.sender) {
         require(amount > 0, "Amount must be > 0");
-        
+
         UserInfo storage user = userInfo[msg.sender];
-        
+
         address(depositToken).safeTransferFrom(msg.sender, address(this), amount);
-        
+
         user.depositAmount += amount;
         totalDeposits += amount;
-        
+
         emit Deposit(msg.sender, amount);
     }
 
     function withdraw(uint256 amount) external nonReentrant updateRewards(msg.sender) {
         UserInfo storage user = userInfo[msg.sender];
         require(user.depositAmount >= amount, "Insufficient balance");
-        
+
         user.depositAmount -= amount;
         totalDeposits -= amount;
-        
+
         address(depositToken).safeTransfer(msg.sender, amount);
-        
+
         emit Withdraw(msg.sender, amount);
     }
 
@@ -91,17 +87,17 @@ contract TokenVault is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[msg.sender];
         uint256 rewards = user.pendingRewards;
         require(rewards > 0, "No rewards available");
-        
+
         user.pendingRewards = 0;
         address(rewardToken).safeTransfer(msg.sender, rewards);
-        
+
         emit RewardClaimed(msg.sender, rewards);
     }
 
     function pendingRewards(address user) external view returns (uint256) {
         UserInfo memory user_ = userInfo[user];
         if (user_.depositAmount == 0 || user_.lastRewardTime == 0) return user_.pendingRewards;
-        
+
         uint256 timeElapsed = block.timestamp - user_.lastRewardTime;
         uint256 newReward = (user_.depositAmount * yieldRate * timeElapsed) / (365 days * 10000);
         return user_.pendingRewards + newReward;
